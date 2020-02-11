@@ -123,7 +123,7 @@ func unpackAndInit(dir string, platform string) (err error) {
 	defer lpError.Close()
 
 	args := []string{
-		"-get-plugins=false",
+		"-get-plugins=true",  // TODO: template plugin is required. Handle this the same as the other plugins.
 	}
 	args = append(args, dir)
 	if exitCode := texec.Init(dir, args, lpDebug, lpError); exitCode != 0 {
@@ -155,6 +155,24 @@ func setupEmbeddedPlugins(dir string) error {
 		if err := os.Symlink(execPath, dst); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// InternalPlugin handles internal Terraform plugins like the local-exec / remote-exec provisioners.
+func InternalPlugin(dir string, extraArgs ...string) (err error) {
+	defaultArgs := []string{}
+	args := append(defaultArgs, extraArgs...)
+
+	tDebug := &lineprinter.Trimmer{WrappedPrint: logrus.Debug}
+	tError := &lineprinter.Trimmer{WrappedPrint: logrus.Error}
+	lpDebug := &lineprinter.LinePrinter{Print: tDebug.Print}
+	lpError := &lineprinter.LinePrinter{Print: tError.Print}
+	defer lpDebug.Close()
+	defer lpError.Close()
+
+	if exitCode := texec.InternalPlugin(dir, args, lpDebug, lpError); exitCode != 0 {
+		return errors.New("failed to call internal-plugin using Terraform")
 	}
 	return nil
 }
